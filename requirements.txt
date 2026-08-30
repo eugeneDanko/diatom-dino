@@ -2,8 +2,9 @@ numpy>=1.24
 pandas>=2.0
 Pillow>=10.0
 PyYAML>=6.0
-torch>=2.1
-torchvision>=0.16
+# Install the CUDA build of torch/torchvision first from pytorch.org.
+# They are intentionally not resolved from the default PyPI index here.
+# JupyterLab workflow: jupyterlab>=4.2, ipykernel>=6.29, ipywidgets>=8.1
 ultralytics>=8.3
 opencv-python>=4.8
 scikit-learn>=1.3

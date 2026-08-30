@@ -2,6 +2,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+.cache/
+.config/
+.ipynb_checkpoints/
 .venv/
 venv/
 .env
@@ -62,6 +65,7 @@ tests/*.py
 !tests/test_obb_utils.py
 !tests/test_report_generator.py
 !tests/test_transforms.py
+!tests/test_notebook_runtime.py
 
 # Model-side research branches not used by the public closed-set pipeline.
 classifier/artifact_classifier.py

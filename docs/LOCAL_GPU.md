@@ -1,17 +1,20 @@
-# Локальный запуск на компьютере с NVIDIA GPU
+# JupyterLab на локальной NVIDIA GPU
 
-Проект не требует DataSphere, S3, Docker или облачного notebook. Все пути
-относительны корню клонированного репозитория:
+DiatomDINO рассчитан на JupyterLab в отдельном Python-окружении. DataSphere,
+S3, Docker и облачный notebook не требуются. Данные и результаты остаются
+локально:
 
 ```text
 DiatomDINO/
-├── data/       # архивы и датасеты
-└── artifacts/  # веса и отчёты
+├── .cache/     # torch/huggingface/matplotlib cache, ignored by Git
+├── data/       # archives, datasetDiatom and splits, ignored by Git
+└── artifacts/  # checkpoints and reports, ignored by Git
 ```
 
-## 1. Окружение
+## 1. Драйвер и Python
 
-Рекомендуется Python 3.10–3.12 и отдельное виртуальное окружение.
+До установки Python-пакетов проверьте наличие NVIDIA driver. Рекомендуется
+Python 3.10-3.12 и отдельное виртуальное окружение.
 
 Windows PowerShell:
 
@@ -29,60 +32,119 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-Сначала установите `torch` и `torchvision` из официального PyTorch selector для
-версии CUDA, поддерживаемой локальным NVIDIA driver. Затем установите проект:
+## 2. CUDA-сборка PyTorch
+
+Сначала установите `torch` и `torchvision` командой из официального PyTorch
+selector, выбрав сборку, совместимую с локальным NVIDIA driver. Проект
+намеренно не объявляет PyTorch обычной package dependency: иначе `pip` может
+заменить рабочий CUDA wheel несовместимой или CPU-сборкой.
+
+Сразу после установки проверьте в том же окружении:
 
 ```bash
-python -m pip install -e ".[faiss,dev]"
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
 ```
 
-Если для ОС/GPU нет подходящего `faiss-cpu` wheel, можно оставить NumPy fallback
-для небольшой gallery либо установить FAISS отдельно через conda.
+Последнее значение должно быть `True`.
 
-## 2. Безопасная проверка
-
-Команда ничего не скачивает и не запускает обучение. Она только читает версии,
-CUDA-состояние и свободное место:
+## 3. Проект, JupyterLab и kernel
 
 ```bash
-python -m scripts.check_environment --minimum-free-gb 100
+python -m pip install -e ".[faiss,jupyter,dev]"
+python -m ipykernel install --user --name diatom-dino \
+  --display-name "Python (DiatomDINO GPU)"
+python -m jupyter lab
 ```
 
-Значение `100` является примером, а не гарантированной оценкой полного объёма:
-перед скачиванием следует сравнить свободное место с актуальными размерами
-четырёх Kaggle-архивов и оставить запас для PNG-копий и checkpoints.
+Если для ОС нет подходящего `faiss-cpu` wheel, установите проект без extra
+`faiss`. Для небольшой gallery используется NumPy fallback; альтернативно
+FAISS можно поставить через conda.
 
-## 3. Локальные данные и обучение
+В JupyterLab обязательно выберите kernel **Python (DiatomDINO GPU)**. Пункт
+меню обычно находится в `Kernel -> Change Kernel`.
 
-Все команды выполняются из корня репозитория:
+## 4. Первый preflight
+
+Откройте `notebooks/public/00_environment.ipynb` и выполните ячейки сверху
+вниз. Проверяются:
+
+- путь к Python активного kernel;
+- версия PyTorch и CUDA runtime;
+- видимая NVIDIA GPU, compute capability и VRAM;
+- наличие JupyterLab/ipykernel;
+- свободное место для `data/`;
+- локальные каталоги cache и artifacts.
+
+Эквивалентная read-only команда:
 
 ```bash
-python -m scripts.prepare_data all --config configs/data.yaml --dry-run
-python -m scripts.prepare_data all --config configs/data.yaml
-python -m scripts.run_train_detector --config configs/detector.yaml
-python -m scripts.run_train_classifier --config configs/classifier.yaml
-python -m scripts.run_build_gallery --config configs/classifier_benchmark.yaml
-python -m scripts.run_test_classifier --config configs/classifier_benchmark.yaml
-python -m scripts.run_test_supermodel --config configs/inference.yaml
+python -m scripts.check_environment --data-root data \
+  --minimum-free-gb 100 --minimum-vram-gb 8 --require-jupyter
 ```
 
-Для другой GPU можно менять параметры без редактирования YAML:
+Она ничего не скачивает и не запускает обучение.
+Если `device=cuda`, DINOv2 не переходит на CPU автоматически: неверный kernel
+завершит preflight с ошибкой до начала длительного обучения.
 
-```bash
-python -m scripts.run_train_detector --config configs/detector.yaml \
-  --set training.batch=4 --set training.workers=2
+## 5. Последовательность notebooks
 
-python -m scripts.run_train_classifier --config configs/classifier.yaml \
-  --set loader.num_workers=2 --set loader.eval_batch_size=32
-```
+1. `00_environment.ipynb` - kernel, CUDA, GPU и VRAM.
+2. `01_prepare_data.ipynb` - dry-run, загрузка, materialization и split audit.
+3. `02_train_detector.ipynb` - YOLO11 train и однократный detector test.
+4. `03_train_classifier.ipynb` - DINOv2 training и checkpoint metrics.
+5. `04_retrieval_benchmark.ipynb` - Gunduz support gallery и retrieval test.
+6. `05_e2e_benchmark.ipynb` - frozen YOLO -> DINOv2 -> FAISS benchmark.
 
-При нехватке VRAM сначала уменьшаются `batch`, `eval_batch_size` и `imgsz`, а не
-размер датасета или состав benchmark.
+Каждая долгая операция защищена флагом `RUN_* = False`. Сначала выполните
+проверочные ячейки, затем измените только требуемый флаг на `True`.
 
-## 4. Переносимость
+## 6. Почему jobs запускаются как subprocess
 
-- Windows и Linux поддерживаются через `pathlib`.
-- Сгенерированный YOLO `data.yaml` содержит абсолютные локальные пути и должен
-  пересоздаваться после переноса готового `data/` на другой компьютер.
-- В Git не попадают `data/`, `artifacts/`, `outputs/` и `.venv/`.
-- ClearML выключен и для локального запуска не требуется.
+Notebook не обучает модели внутри памяти kernel. `core.notebook_runtime`
+запускает CLI через `sys.executable` активного kernel и передаёт ему выбранную
+GPU. Благодаря этому:
+
+- YOLO и DINO не оставляют CUDA tensors в kernel после завершения;
+- повторный этап начинается с чистого GPU context;
+- прерывание ячейки корректно останавливает дочерний процесс;
+- stdout/stderr отображаются непосредственно под ячейкой;
+- CLI и notebook используют одинаковые configs и код.
+
+Torch Hub, Hugging Face и Matplotlib cache сохраняются в `.cache/` проекта, а
+не во временном каталоге ОС. Поэтому веса DINOv2 не скачиваются заново после
+перезапуска JupyterLab.
+
+## 7. Настройка под VRAM
+
+Начальные ориентиры:
+
+| VRAM | YOLO batch | YOLO imgsz | DINO eval batch | workers |
+|---:|---:|---:|---:|---:|
+| 8-11 GiB | 2 | 768 | 16 | 2 |
+| 12-15 GiB | 4 | 1024 | 32 | 4 |
+| 16+ GiB | 8 | 1024 | 64 | 4 |
+
+Это безопасные стартовые профили, а не гарантированные пределы. При OOM
+сначала уменьшайте batch, затем eval batch и только после этого `imgsz`. Не
+изменяйте состав датасета или frozen benchmark ради экономии VRAM.
+
+На Windows `num_workers` применяется внутри отдельного CLI-процесса, а не в
+kernel, поэтому multiprocessing DataLoader не зависит от notebook state. Если
+worker завершается с ошибкой, временно задайте `WORKERS = 0` или `2`.
+
+## 8. ClearML
+
+ClearML необязателен и по умолчанию выключен. Установите extra `clearml`,
+задайте ключи только через переменные окружения до запуска JupyterLab и
+включите `ENABLE_CLEARML = True` в нужном notebook. Значения ключей никогда не
+записываются в `.ipynb`.
+
+## 9. Перенос проекта
+
+- `pathlib` поддерживает Windows и Linux.
+- YOLO `data.yaml` содержит абсолютные локальные пути, поэтому splits следует
+  пересоздать после переноса готового `data/` на другой компьютер.
+- В Git не попадают `.cache/`, `.config/`, `data/`, `artifacts/`, outputs и
+  checkpoints notebook.
+- Для нового полного эксперимента используйте новый output/data root, а не
+  перезаписывайте frozen результаты.

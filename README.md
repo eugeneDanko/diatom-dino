@@ -6,9 +6,9 @@
 Gunduz image → YOLO11 Detect → grayscale crop → DINOv2 embedding → FAISS top-k
 ```
 
-Проект рассчитан на локальный Windows/Linux компьютер с NVIDIA GPU. Облачные
-хранилища, DataSphere, S3 и `/home/jupyter` не используются. Настройка локальной
-среды описана в [`docs/LOCAL_GPU.md`](docs/LOCAL_GPU.md).
+Проект рассчитан на JupyterLab в локальном Windows/Linux окружении с NVIDIA
+GPU. Облачные хранилища, DataSphere, S3 и `/home/jupyter` не используются.
+Настройка kernel и CUDA описана в [`docs/LOCAL_GPU.md`](docs/LOCAL_GPU.md).
 
 ## Что входит в проект
 
@@ -40,10 +40,11 @@ artifacts/        checkpoints and reports; ignored by Git
 tests/            unit tests
 ```
 
-Актуальные notebooks находятся в `notebooks/public/`: подготовка данных,
+Актуальные notebooks находятся в `notebooks/public/`: GPU preflight, подготовка данных,
 обучение и тест YOLO, обучение DINOv2, retrieval benchmark и финальная E2E
 оценка. Исторические исследовательские notebooks не входят в публичную версию.
 
+- [`00_environment.ipynb`](notebooks/public/00_environment.ipynb)
 - [`01_prepare_data.ipynb`](notebooks/public/01_prepare_data.ipynb)
 - [`02_train_detector.ipynb`](notebooks/public/02_train_detector.ipynb)
 - [`03_train_classifier.ipynb`](notebooks/public/03_train_classifier.ipynb)
@@ -55,16 +56,25 @@ tests/            unit tests
 ## Установка
 
 Сначала установите CUDA-сборку `torch`/`torchvision`, соответствующую локальному
-NVIDIA driver, через официальный PyTorch selector. Затем:
+NVIDIA driver, через официальный PyTorch selector. Эти пакеты намеренно не
+разрешаются проектом через обычный PyPI. Затем установите JupyterLab и проект:
 
 ```bash
-python -m pip install -e ".[faiss,dev]"
+python -m pip install -e ".[faiss,jupyter,dev]"
+python -m ipykernel install --user --name diatom-dino \
+  --display-name "Python (DiatomDINO GPU)"
+python -m jupyter lab
 ```
 
 В готовом CUDA-образе можно установить проект без `faiss` extra и использовать
 FAISS из conda/образа.
 
 ClearML необязателен: `python -m pip install -e ".[clearml]"`.
+
+В JupyterLab выберите kernel `Python (DiatomDINO GPU)` и начните с
+`notebooks/public/00_environment.ipynb`. Долгие этапы выполняются отдельными
+дочерними процессами выбранного kernel, поэтому вывод остаётся в notebook, а
+CUDA-память освобождается между стадиями.
 
 ## Подготовка данных
 

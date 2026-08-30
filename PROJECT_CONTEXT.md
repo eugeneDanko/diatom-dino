@@ -20,8 +20,9 @@ Gunduz image -> YOLO11 Detect -> grayscale crop -> DINOv2 -> FAISS top-k
   возвращает наиболее близкий род и вид.
 - Старые NII/open-set/stage2.5/stage3 протоколы являются legacy и перечислены в
   `docs/LEGACY.md`.
-- Целевая среда — локальный Windows/Linux компьютер с NVIDIA GPU. В актуальной
-  архитектуре запрещены S3-пути, `/home/jupyter` и зависимости от DataSphere.
+- Целевая среда — JupyterLab в локальном Windows/Linux окружении с NVIDIA GPU.
+  В актуальной архитектуре запрещены S3-пути, `/home/jupyter` и зависимости от
+  DataSphere.
 
 ## Основные каталоги
 
@@ -32,8 +33,10 @@ Gunduz image -> YOLO11 Detect -> grayscale crop -> DINOv2 -> FAISS top-k
 - `data_pipeline/` — загрузка, parsing, materialization и splits.
 - `scripts/` — тонкие CLI entry points.
 - `configs/` — актуальные YAML.
-- `notebooks/public/` — локальные GPU-workflows с выключенными по умолчанию
-  флагами долгих операций.
+- `notebooks/public/` — основной JupyterLab workflow с отдельным GPU preflight
+  и выключенными по умолчанию флагами долгих операций.
+- `core/notebook_runtime.py` — единый root/cache/GPU context и безопасный запуск
+  CLI в дочернем процессе активного Jupyter kernel.
 - `data/` — runtime data, кроме README не попадает в Git.
 - `artifacts/` — checkpoints/reports, не попадает в Git.
 
@@ -93,10 +96,13 @@ ClearML по умолчанию выключен, чтобы clone запуск�
 включить override `--set clearml.enabled=true`.
 
 Перед установкой проекта пользователь отдельно устанавливает CUDA-сборку
-PyTorch, совместимую с драйвером компьютера. Read-only команда
-`python -m scripts.check_environment` сообщает GPU, CUDA и свободное место, но
-ничего не скачивает и не запускает обучение. Инструкция находится в
-`docs/LOCAL_GPU.md`.
+PyTorch, совместимую с драйвером компьютера. `torch` и `torchvision` намеренно
+исключены из package dependencies, чтобы обычный PyPI не заменил CUDA wheel.
+После этого устанавливается extra `jupyter`, регистрируется kernel
+`diatom-dino`, а `notebooks/public/00_environment.ipynb` проверяет активный
+интерпретатор, GPU и VRAM. Долгие jobs запускаются как subprocess этого kernel.
+Запрос `device=cuda` является fail-fast и никогда молча не переключается на CPU.
+Инструкция находится в `docs/LOCAL_GPU.md`.
 
 ## Closed-set inference
 
@@ -119,6 +125,15 @@ E2E tester больше не требует NII и формирует `overall/*
 - Для GitHub не добавлять содержимое `data/`, `artifacts/`, `outputs/`, `work/`.
 
 ## Порядок запуска
+
+Основной порядок в JupyterLab:
+
+```text
+00_environment -> 01_prepare_data -> 02_train_detector ->
+03_train_classifier -> 04_retrieval_benchmark -> 05_e2e_benchmark
+```
+
+CLI остаётся эквивалентным интерфейсом:
 
 ```bash
 python -m scripts.prepare_data all --config configs/data.yaml --dry-run

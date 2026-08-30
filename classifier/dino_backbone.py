@@ -24,7 +24,7 @@ class DINOBackbone(BaseModel):
     ) -> None:
         self.model_name = model_name
         self.repository = repository
-        self.device = torch.device(device if device != "cuda" or torch.cuda.is_available() else "cpu")
+        self.device = self._validated_device(device)
         self.unfreeze_layers = int(unfreeze_layers)
         self.pretrained = bool(pretrained)
         self.model: nn.Module | None = None
@@ -87,13 +87,22 @@ class DINOBackbone(BaseModel):
                     parameter.requires_grad = True
 
     def to_device(self, device: str | Any) -> "DINOBackbone":
-        requested = torch.device(device)
-        if requested.type == "cuda" and not torch.cuda.is_available():
-            requested = torch.device("cpu")
+        requested = self._validated_device(device)
         self.device = requested
         if self.model is not None:
             self.model.to(self.device)
         return self
+
+    @staticmethod
+    def _validated_device(device: str | Any) -> torch.device:
+        requested = torch.device(device)
+        if requested.type == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError(
+                "CUDA was requested for DINOv2 but is unavailable. Select the "
+                "DiatomDINO GPU Jupyter kernel or explicitly configure device=cpu "
+                "for a smoke test."
+            )
+        return requested
 
     def save(self, path: str | Path) -> Path:
         if self.model is None:
