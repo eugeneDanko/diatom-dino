@@ -1,0 +1,16 @@
+numpy>=1.24
+pandas>=2.0
+Pillow>=10.0
+PyYAML>=6.0
+torch>=2.1
+torchvision>=0.16
+ultralytics>=8.3
+opencv-python>=4.8
+scikit-learn>=1.3
+matplotlib>=3.7
+# Experiment tracking is optional: install clearml>=1.16 when needed.
+# Optional diagnostic UMAP plots (PCA is used when omitted):
+# umap-learn>=0.5
+# Install exactly one FAISS build suitable for the local OS/CUDA environment:
+# faiss-cpu>=1.8
+# faiss-gpu (when supplied by the CUDA image/conda channel)

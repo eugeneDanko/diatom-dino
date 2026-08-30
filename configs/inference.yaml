@@ -1,0 +1,31 @@
+seed: 42
+paths:
+  detector_weights: artifacts/detector/yolo11m/weights/best.pt
+  classifier_checkpoint: artifacts/classifier/dinov2/best.pt
+  genus_index: artifacts/classifier/gunduz-gallery/genus_index.npz
+  species_index: artifacts/classifier/gunduz-gallery/species_index.npz
+  output_dir: artifacts/e2e/gunduz
+  input: data/datasetDiatom
+  ground_truth: data/splits/benchmark/gunduz/e2e_taxonomy.csv
+  metadata: data/splits/benchmark/gunduz/e2e_metadata.csv
+dataset:
+  root: data/datasetDiatom
+  table_path: data/splits/benchmark/gunduz/all.csv
+  codec_table_path: data/splits/benchmark/gunduz/canonical_codec.csv
+model:
+  name: dinov2_vitb14_reg
+  repository: facebookresearch/dinov2
+  pretrained: true
+  device: cuda
+  unfreeze_layers: 0
+projection_head: {hidden_dim: 512, projection_dim: 256, dropout: 0.1}
+transforms: {color_mode: grayscale, image_size: 224}
+detector: {device: "0", diatom_class_id: 0, confidence: 0.25, iou: 0.7, image_size: 1024}
+inference: {open_set: false, top_k: 5, crop_padding: 0.05, save_crops: true}
+evaluation: {match_iou: 0.5, image_extension: .png}
+clearml:
+  enabled: false
+  project_name: DiatomDINO
+  task_name: e2e-gunduz-closed-set
+  tags: [inference, end-to-end, gunduz, closed-set]
+  output_uri: null

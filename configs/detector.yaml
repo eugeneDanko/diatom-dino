@@ -1,0 +1,36 @@
+seed: 42
+paths: {data_yaml: data/splits/detector/data.yaml, output_dir: artifacts/detector/yolo11m}
+model: {weights: yolo11m.pt, device: "0", diatom_class_id: 0}
+training:
+  data: data/splits/detector/data.yaml
+  task: detect
+  epochs: 100
+  imgsz: 1024
+  batch: 8
+  patience: 20
+  optimizer: AdamW
+  lr0: 0.001
+  weight_decay: 0.0005
+  workers: 4
+  cache: false
+  deterministic: true
+  seed: 42
+  plots: true
+  degrees: 180.0
+  translate: 0.05
+  scale: 0.25
+  fliplr: 0.5
+  flipud: 0.5
+  hsv_h: 0.01
+  hsv_s: 0.15
+  hsv_v: 0.15
+  mosaic: 0.5
+  mixup: 0.0
+  close_mosaic: 10
+evaluation: {split: test, imgsz: 1024, confidence: 0.25, iou: 0.7}
+clearml:
+  enabled: false
+  project_name: DiatomDINO
+  task_name: train-yolo11m-gunduz
+  tags: [detector, yolo11, gunduz]
+  output_uri: null

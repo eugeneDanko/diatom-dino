@@ -1,0 +1,23 @@
+seed: 42
+data_root: data
+raw_archives_dir: raw/archives
+
+# NII is intentionally absent. These are the complete public inputs.
+sources:
+  gunduz:
+    url: https://www.kaggle.com/api/v1/datasets/download/huseyingunduz/diatom-dataset
+    archive: gunduz-diatom-dataset.zip
+  ude:
+    url: https://www.kaggle.com/api/v1/datasets/download/michaelkloster/ude-diatoms-in-the-wild-2024
+    archive: ude-diatoms-in-the-wild-2024.zip
+  diatom1042:
+    url: https://www.kaggle.com/api/v1/datasets/download/suziwsz/diatom1042
+    archive: diatom1042.zip
+  siyue_pu:
+    url: https://www.kaggle.com/api/v1/datasets/download/siyuepu/diatom-datasets
+    archive: diatom-datasets-siyue-pu.zip
+
+splits:
+  detector: {train: 0.70, val: 0.15, test: 0.15}
+  classifier_validation: 0.15
+  benchmark_gallery: 0.30
