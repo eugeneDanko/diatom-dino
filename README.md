@@ -34,10 +34,21 @@ core/             configuration, logging, base lifecycle
 data_pipeline/    downloader, parser, materializer and splitter
 scripts/          thin command-line entry points
 configs/          current configurations
+notebooks/        guarded local-GPU workflows (long actions are off by default)
 data/             downloaded/runtime data; ignored by Git
 artifacts/        checkpoints and reports; ignored by Git
 tests/            unit tests
 ```
+
+Актуальные notebooks находятся в `notebooks/public/`: подготовка данных,
+обучение и тест YOLO, обучение DINOv2, retrieval benchmark и финальная E2E
+оценка. Исторические исследовательские notebooks не входят в публичную версию.
+
+- [`01_prepare_data.ipynb`](notebooks/public/01_prepare_data.ipynb)
+- [`02_train_detector.ipynb`](notebooks/public/02_train_detector.ipynb)
+- [`03_train_classifier.ipynb`](notebooks/public/03_train_classifier.ipynb)
+- [`04_retrieval_benchmark.ipynb`](notebooks/public/04_retrieval_benchmark.ipynb)
+- [`05_e2e_benchmark.ipynb`](notebooks/public/05_e2e_benchmark.ipynb)
 
 Физическая структура данных описана в `data/README.md`.
 

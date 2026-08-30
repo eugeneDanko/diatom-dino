@@ -32,6 +32,7 @@ configs/*.yaml
 !configs/inference.yaml
 notebooks/*.ipynb
 !notebooks/00_quickstart.ipynb
+!notebooks/public/*.ipynb
 scripts/*.py
 !scripts/__init__.py
 !scripts/common.py

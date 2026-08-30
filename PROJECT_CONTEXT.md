@@ -32,6 +32,8 @@ Gunduz image -> YOLO11 Detect -> grayscale crop -> DINOv2 -> FAISS top-k
 - `data_pipeline/` — загрузка, parsing, materialization и splits.
 - `scripts/` — тонкие CLI entry points.
 - `configs/` — актуальные YAML.
+- `notebooks/public/` — локальные GPU-workflows с выключенными по умолчанию
+  флагами долгих операций.
 - `data/` — runtime data, кроме README не попадает в Git.
 - `artifacts/` — checkpoints/reports, не попадает в Git.
 
